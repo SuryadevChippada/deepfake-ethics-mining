@@ -21,7 +21,7 @@ The scripts only find *candidates*. Every result in the paper is checked manuall
 You need Python 3.11+, git and the [GitHub CLI](https://cli.github.com/).
 
 ```bash
-git clone https://github.com/<user>/deepfake-ethics-mining.git
+git clone https://github.com/SuryadevChippada/deepfake-ethics-mining.git
 cd deepfake-ethics-mining
 pip install -r requirements.txt
 gh auth login
