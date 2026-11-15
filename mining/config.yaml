@@ -1,0 +1,106 @@
+# All study parameters live here. Code contains no magic numbers.
+# Edit, then re-run the affected stage (and everything downstream).
+
+paths:
+  output: output
+  data: data
+
+# ---------------------------------------------------------------- S1 search
+search:
+  min_stars: 100
+  per_page: 100
+  max_results_per_query: 1000     # GitHub search hard limit
+  # Used only when a query reports > max_results_per_query hits.
+  star_ranges: ["100..199", "200..499", "500..999", "1000..4999", ">=5000"]
+  queries:
+    - '"deepfake"'
+    - '"face swap"'
+    - 'faceswap'
+    - '"face swapping"'
+    - '"voice cloning"'
+    - '"voice conversion"'
+    - '"talking head"'
+    - '"lip sync"'
+    - '"face reenactment"'
+    - 'topic:deepfakes'
+    - 'topic:deepfake'
+    - 'topic:face-swap'
+    - 'topic:voice-cloning'
+    # Added (not in brief): the brief's queries yield 0 full_body_or_other repos.
+    - '"motion transfer"'
+    - '"image animation"'
+    - '"character animation"'
+
+# ---------------------------------------------------------------- S2 select
+select:
+  sample_size: 30
+  min_per_type: 4
+  seed: 20251115
+  min_pushed: "2018-01-01"
+  overlap_size: 8                  # repos coded by both A and B (~27%)
+  readme_min_chars_for_langdetect: 200
+  # Matched against "name + description + topics" (lower-cased) first,
+  # then against the README (first readme_scan_chars characters).
+  readme_scan_chars: 4000
+  # action: exclude -> automatic exclusion; flag -> kept but needs_manual_check
+  not_generation_rules:
+    - {id: awesome_or_paper_list, action: exclude,
+       pattern: '\bawesome\b|curated list|paper list|list of (papers|resources|tools)|reading list|collection of (papers|resources)|\bsurvey\b'}
+    - {id: detection_only, action: exclude, unless_generation: true,
+       pattern: '\bdetect(or|ion|ing)?\b|forensic|anti-?deepfake|\bfake (image|video|face) (detection|classification)|deepfake classification'}
+    - {id: dataset, action: exclude, unless_generation: true,
+       pattern: '\b(dataset|benchmark|corpus)\b'}
+    - {id: tutorial, action: flag,
+       pattern: '\btutorial\b|\bcourse\b|\blecture\b|\bhomework\b|\bassignment\b|\bexamples? (of|for)\b'}
+    - {id: wrapper_gui, action: exclude,
+       pattern: '\b(extension|plugin|add-?on|node|nodes) for\b|\bsd-webui\b|comfyui|stable-diffusion-webui|automatic1111'}
+    - {id: off_domain_uncertain, action: flag,
+       pattern: '\b(video editor|music|audiobook|podcast|subtitle|cartoon|anime|game|unity|vtuber|mcp)\b'}
+    - {id: wrapper_gui_uncertain, action: flag,
+       pattern: '\b(gui|webui|web ui|ui|frontend|front-end|wrapper|colab|api|bot) (for|of)\b|\bwrapper\b|\bfork of\b|\bunofficial\b'}
+  generation_words: 'swap|generat|synthes|clon|convert|conversion|reenact|animat|lip.?sync|talking|creat|changer|tts|text.to.speech'
+  # Tool type: first type-specific match wins by count; generic terms only if nothing else matched.
+  type_keywords:
+    face_swap: ['face ?swap', 'swap(ping)? faces?', 'face replacement', 'face ?transfer', 'deepfacelab', 'deepfacelive', 'simswap', 'inswapper', '\broop\b', 'faceswap', 'face-?swap', 'live ?cam']
+    talking_head_lipsync: ['talking[ -]?(head|face|portrait|avatar)', 'lip[ -]?sync', 'wav2lip', 'reenactment', 'facial animation', 'portrait animation', 'audio[ -]driven', 'face animation', 'digital human', 'avatar']
+    voice: ['voice ?clon', 'voice[ -]conversion', 'voice ?changer', 'speech synthesis', 'text[ -]to[ -]speech', '\btts\b', 'singing voice', '\bsvc\b', '\brvc\b', 'vocoder', 'speaker adaptation', 'voice-cloning', 'voice-conversion']
+    full_body_or_other: ['full[ -]body', 'motion transfer', 'pose transfer', 'human (video|image) (generation|animation)', 'body swap', 'image animation', 'virtual try', 'dance', 'character animation', 'head swap', 'gender swap', 'age swap']
+  generic_type_keywords: {face_swap: ['deep ?fakes?', 'deep-?fakes?']}
+  # Manual overrides, applied after automatic rules. Example:
+  # manual_overrides:
+  #   owner/name: {include: false, reason: "GUI wrapper of roop"}
+  #   owner/other: {include: true, type: voice, reason: "checked manually"}
+  manual_overrides: {}
+
+# ---------------------------------------------------------------- S3 collect
+collect:
+  max_file_bytes: 2000000
+  issue_cap: 3000
+  comment_issue_cap: 60            # max keyword-matching issues per repo whose comments are fetched
+  hf_cards_max: 5
+  git_timeout_s: 600
+  doc_globs: ['README*', 'readme*', 'LICENSE*', 'LICENCE*', 'COPYING*', 'CODE_OF_CONDUCT*', 'ETHICS*', 'DISCLAIMER*',
+              'RESPONSIBLE*', 'USAGE_POLICY*', 'MODEL_CARD*', 'MODELCARD*', '*/README*', 'docs/*.md', 'doc/*.md',
+              'docs/*.rst', '.github/CODE_OF_CONDUCT*']
+  code_exts: ['.py', '.js', '.ts', '.ipynb', '.yaml', '.yml', '.json', '.toml', '.ini', '.cfg', '.sh', '.bat', '.md', '.rst', '.txt']
+  # History is prefetched for these extensions only (keeps clones text-only and small).
+  history_exts: ['.py', '.js', '.ts', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.md', '.rst', '.txt']
+  history_blob_cap: 30000
+  skip_dirs: ['node_modules', '.git', 'site-packages', 'venv', '.venv', 'dist', 'build', '__pycache__', 'third_party', 'vendor']
+
+# ---------------------------------------------------------------- S4 extract
+extract:
+  context_lines: 3
+  quote_max_words: 25
+  max_candidates_per_repo_code: 40  # candidate rows kept for coding; counts always use all hits
+  # Verify dates before citing. DeepNude was released/withdrawn in June 2019 (brief said 2019-10).
+  # GitHub policy date taken from the brief; check against GitHub's Acceptable Use Policy changelog.
+  events:
+    - {id: deepnude, date: "2019-06-27", label: "DeepNude"}
+    - {id: github_policy, date: "2023-11-01", label: "GitHub policy change"}
+    - {id: eu_ai_act, date: "2024-08-01", label: "EU AI Act in force"}
+
+# ---------------------------------------------------------------- privacy
+privacy:
+  # Overridden by env PSEUDONYM_SALT. Keep the real salt out of shared copies.
+  pseudonym_salt: "deepfake-msr-2025"

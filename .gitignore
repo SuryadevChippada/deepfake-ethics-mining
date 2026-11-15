@@ -1,0 +1,14 @@
+# secrets / env
+.env
+.venv/
+# generated data and results (not code; contain mined repository text)
+data/
+output/
+# non-code docs
+DRAFT_PROMPT.md
+# python / OS noise
+__pycache__/
+.pytest_cache/
+*.pyc
+.DS_Store
+.vscode/
